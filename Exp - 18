@@ -1,0 +1,125 @@
+# -------------------------------------------------------------------
+# CNN Binary Classification with Hyperparameter Variations
+# Hyperparameters:
+#   ✔ Batch Size
+#   ✔ Optimizer
+#   ✔ Activation Function
+#   ✔ Learning Rate
+# Dataset: CIFAR-10 converted to binary classification
+# -------------------------------------------------------------------
+
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.optimizers import Adam, SGD
+from tensorflow.keras.utils import to_categorical
+import numpy as np
+
+# -------------------------------------------------------------------
+# 1. Load CIFAR-10 Dataset and Convert to Binary (Cat vs Dog)
+# -------------------------------------------------------------------
+
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+
+# CIFAR labels:
+# 3 = cat, 5 = dog
+binary_classes = [3, 5]
+
+train_filter = np.where((y_train == 3) | (y_train == 5))[0]
+test_filter  = np.where((y_test == 3)  | (y_test == 5))[0]
+
+x_train, y_train = x_train[train_filter], y_train[train_filter]
+x_test, y_test   = x_test[test_filter], y_test[test_filter]
+
+# Convert labels to 0/1
+y_train = (y_train == 5).astype(int)
+y_test  = (y_test  == 5).astype(int)
+
+# Normalize images
+x_train = x_train / 255.0
+x_test  = x_test / 255.0
+
+# One-hot encoding (Softmax)
+y_train = to_categorical(y_train, 2)
+y_test  = to_categorical(y_test, 2)
+
+# -------------------------------------------------------------------
+# 2. Function to Build CNN Model
+# -------------------------------------------------------------------
+
+def build_cnn(activation='relu', lr=0.001, optimizer_name='adam'):
+
+    model = Sequential([
+        Conv2D(32, (3,3), activation=activation, input_shape=(32,32,3)),
+        MaxPooling2D(2,2),
+
+        Conv2D(64, (3,3), activation=activation),
+        MaxPooling2D(2,2),
+
+        Conv2D(128, (3,3), activation=activation),
+        MaxPooling2D(2,2),
+
+        Flatten(),
+        Dense(128, activation=activation),
+        Dropout(0.4),
+
+        Dense(2, activation='softmax')
+    ])
+
+    # Select optimizer with chosen learning rate
+    if optimizer_name == 'adam':
+        optimizer = Adam(learning_rate=lr)
+    elif optimizer_name == 'sgd':
+        optimizer = SGD(learning_rate=lr, momentum=0.9)
+
+    model.compile(
+        loss='categorical_crossentropy',
+        optimizer=optimizer,
+        metrics=['accuracy']
+    )
+    return model
+
+# -------------------------------------------------------------------
+# 3. Hyperparameter Options
+# -------------------------------------------------------------------
+
+batch_sizes = [32, 64]
+optimizers = ['adam', 'sgd']
+activations = ['relu', 'tanh']
+learning_rates = [0.001, 0.0001]
+
+# -------------------------------------------------------------------
+# 4. Train Model with All Hyperparameter Combinations
+# -------------------------------------------------------------------
+
+results = []
+
+for bs in batch_sizes:
+    for opt in optimizers:
+        for act in activations:
+            for lr in learning_rates:
+
+                print(f"\nTraining CNN with: batch={bs}, optimizer={opt}, activation={act}, lr={lr}")
+
+                model = build_cnn(activation=act, lr=lr, optimizer_name=opt)
+
+                history = model.fit(
+                    x_train, y_train,
+                    epochs=5,
+                    batch_size=bs,
+                    validation_data=(x_test, y_test),
+                    verbose=1
+                )
+
+                test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
+
+                results.append([bs, opt, act, lr, test_acc])
+
+# -------------------------------------------------------------------
+# 5. Print Results
+# -------------------------------------------------------------------
+
+print("\n\n================= FINAL RESULTS =================")
+print("BatchSize | Optimizer | Activation | LearningRate | Accuracy")
+for r in results:
+    print(r)
