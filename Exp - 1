@@ -1,0 +1,77 @@
+import numpy as np
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score, classification_report
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# ------------------------------------------------------------
+# 1. BI-LEVEL (BINARY) CONFUSION MATRIX
+# ------------------------------------------------------------
+
+# Example binary classification (0 = negative, 1 = positive)
+y_true_binary = [0, 1, 0, 1, 1, 0, 1, 0]
+y_pred_binary = [0, 1, 0, 0, 1, 0, 1, 1]
+
+# Confusion Matrix
+cm_binary = confusion_matrix(y_true_binary, y_pred_binary)
+
+print("=== BI-LEVEL (Binary) Confusion Matrix ===")
+print(cm_binary)
+
+# Performance verification
+acc_bin = accuracy_score(y_true_binary, y_pred_binary)
+prec_bin = precision_score(y_true_binary, y_pred_binary)
+rec_bin = recall_score(y_true_binary, y_pred_binary)
+f1_bin = f1_score(y_true_binary, y_pred_binary)
+
+print("\nBinary Classification Performance:")
+print(f"Accuracy  : {acc_bin:.3f}")
+print(f"Precision : {prec_bin:.3f}")
+print(f"Recall    : {rec_bin:.3f}")
+print(f"F1-score  : {f1_bin:.3f}")
+
+# Plot heatmap
+plt.figure(figsize=(5,4))
+sns.heatmap(cm_binary, annot=True, fmt="d", cmap="Blues")
+plt.title("Binary Confusion Matrix")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()
+
+
+# ------------------------------------------------------------
+# 2. MULTI-LEVEL (MULTICLASS) CONFUSION MATRIX
+# ------------------------------------------------------------
+
+# Example: 3-class classification (classes 0,1,2)
+y_true_multi =  [0, 1, 2, 1, 0, 2, 1, 2, 0]
+y_pred_multi =  [0, 2, 1, 1, 0, 2, 0, 2, 1]
+
+# Confusion Matrix
+cm_multi = confusion_matrix(y_true_multi, y_pred_multi)
+
+print("\n=== MULTI-LEVEL (Multiclass) Confusion Matrix ===")
+print(cm_multi)
+
+# Performance verification
+acc_multi = accuracy_score(y_true_multi, y_pred_multi)
+prec_multi = precision_score(y_true_multi, y_pred_multi, average='macro')
+rec_multi = recall_score(y_true_multi, y_pred_multi, average='macro')
+f1_multi = f1_score(y_true_multi, y_pred_multi, average='macro')
+
+print("\nMulticlass Classification Performance:")
+print(f"Accuracy  : {acc_multi:.3f}")
+print(f"Precision : {prec_multi:.3f}")
+print(f"Recall    : {rec_multi:.3f}")
+print(f"F1-score  : {f1_multi:.3f}")
+
+# Class-wise metrics
+print("\n=== Classification Report ===")
+print(classification_report(y_true_multi, y_pred_multi))
+
+# Plot heatmap
+plt.figure(figsize=(6,5))
+sns.heatmap(cm_multi, annot=True, fmt="d", cmap="Greens")
+plt.title("Multiclass Confusion Matrix")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()
