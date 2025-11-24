@@ -1,0 +1,107 @@
+# -----------------------------------------------------------
+# Performance Evaluation of Neural Network Architecture
+# Based on Layers, Neurons, Learning Rate, Activation Function
+# (Equivalent to Neural Network Playground Experiments)
+# -----------------------------------------------------------
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.datasets import make_moons
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
+
+# -----------------------------------------------------------
+# 1. Generate Dataset (Nonlinear, like Playground)
+# -----------------------------------------------------------
+X, y = make_moons(n_samples=1200, noise=0.25, random_state=42)
+
+# Train/Test Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Feature Scaling
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# -----------------------------------------------------------
+# 2. Define architecture evaluation parameters
+# -----------------------------------------------------------
+hidden_layer_configs = [
+    (5,),        # 1 layer with 5 neurons
+    (10,),       # 1 layer with 10 neurons
+    (20,),       # 1 layer with 20 neurons
+    (10, 10),    # 2 layers with 10 neurons each
+    (20, 10),    # 2 layers with different neurons
+    (30, 20, 10) # 3 layers
+]
+
+learning_rates = [0.001, 0.01, 0.1]
+activations = ["relu", "tanh", "logistic"]
+
+# -----------------------------------------------------------
+# 3. Train model for each combination and store performance
+# -----------------------------------------------------------
+print("\n=================== MODEL PERFORMANCE REPORT ===================\n")
+results = []
+
+for hl in hidden_layer_configs:
+    for lr in learning_rates:
+        for act in activations:
+            
+            model = MLPClassifier(
+                hidden_layer_sizes=hl,
+                activation=act,
+                learning_rate_init=lr,
+                max_iter=2000,
+                random_state=42
+            )
+
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test)
+            acc = accuracy_score(y_test, y_pred)
+
+            results.append((hl, lr, act, acc))
+
+            print(f"Layers={hl},  LR={lr},  Act={act}  ---> Accuracy = {acc:.4f}")
+
+print("\n================================================================\n")
+
+# -----------------------------------------------------------
+# 4. Example visualization for one configuration
+# -----------------------------------------------------------
+
+best_config = max(results, key=lambda x: x[3])  # highest accuracy
+best_layers, best_lr, best_act, best_acc = best_config
+
+print(f"\nBest Model:\nLayers={best_layers}, LR={best_lr}, Activation={best_act}, Accuracy={best_acc:.4f}\n")
+
+# Retrain best model
+best_model = MLPClassifier(
+    hidden_layer_sizes=best_layers,
+    activation=best_act,
+    learning_rate_init=best_lr,
+    max_iter=2000,
+    random_state=42
+)
+best_model.fit(X_train, y_train)
+
+# Create mesh for decision boundary
+xx, yy = np.meshgrid(
+    np.linspace(X_train[:, 0].min() - 1, X_train[:, 0].max() + 1, 400),
+    np.linspace(X_train[:, 1].min() - 1, X_train[:, 1].max() + 1, 400)
+)
+Z = best_model.predict(np.c_[xx.ravel(), yy.ravel()])
+Z = Z.reshape(xx.shape)
+
+# Plot results
+plt.figure(figsize=(8, 6))
+plt.contourf(xx, yy, Z, alpha=0.35)
+plt.scatter(X_test[:, 0], X_test[:, 1], c=y_test, edgecolor='k')
+plt.title(f"Decision Boundary of Best Model\nLayers={best_layers}, LR={best_lr}, Act={best_act}")
+plt.xlabel("Input Feature 1")
+plt.ylabel("Input Feature 2")
+plt.show()
