@@ -1,0 +1,97 @@
+# -------------------------------------------------------------
+# CNN for Binary Classification using Softmax Classifier
+# Dataset: Cats vs Dogs (Binary Classification)
+# -------------------------------------------------------------
+
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import matplotlib.pyplot as plt
+
+# -------------------------------------------------------------
+# 1. Load Dataset (Keras Cats vs Dogs)
+# -------------------------------------------------------------
+img_size = 128
+
+(train_ds, val_ds), ds_info = tf.keras.utils.image_dataset_from_directory(
+    "cats_vs_dogs",
+    labels="inferred",
+    label_mode="categorical",     # Ensures Softmax output
+    batch_size=32,
+    image_size=(img_size, img_size),
+    shuffle=True,
+    validation_split=0.2,
+    subset=("training", "validation"),
+    seed=42
+)
+
+# -------------------------------------------------------------
+# 2. Normalize Images
+# -------------------------------------------------------------
+normalization_layer = tf.keras.layers.Rescaling(1./255)
+
+train_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
+val_ds = val_ds.map(lambda x, y: (normalization_layer(x), y))
+
+# -------------------------------------------------------------
+# 3. CNN Architecture
+# -------------------------------------------------------------
+model = Sequential([
+    Conv2D(32, (3,3), activation='relu', input_shape=(img_size, img_size, 3)),
+    MaxPooling2D(2,2),
+
+    Conv2D(64, (3,3), activation='relu'),
+    MaxPooling2D(2,2),
+
+    Conv2D(128, (3,3), activation='relu'),
+    MaxPooling2D(2,2),
+
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dropout(0.4),
+
+    # Softmax output layer — 2 classes
+    Dense(2, activation='softmax')
+])
+
+# -------------------------------------------------------------
+# 4. Compile the Model
+# -------------------------------------------------------------
+model.compile(
+    optimizer='adam',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+model.summary()
+
+# -------------------------------------------------------------
+# 5. Train the Model
+# -------------------------------------------------------------
+history = model.fit(
+    train_ds,
+    validation_data=val_ds,
+    epochs=10
+)
+
+# -------------------------------------------------------------
+# 6. Training Curves
+# -------------------------------------------------------------
+plt.figure(figsize=(12,5))
+
+# Accuracy plot
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Train Acc')
+plt.plot(history.history['val_accuracy'], label='Val Acc')
+plt.title("Accuracy")
+plt.legend()
+
+# Loss plot
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Val Loss')
+plt.title("Loss")
+plt.legend()
+
+plt.show()
