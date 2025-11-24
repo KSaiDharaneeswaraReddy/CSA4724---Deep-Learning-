@@ -1,0 +1,80 @@
+# ------------------------------------------------------------------
+# Performance Verification of Neural Network Model Using Circular Data
+# Dataset : Synthetic make_circles() (Two-class circular data)
+# Model   : MLPClassifier (Neural Network)
+# ------------------------------------------------------------------
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.datasets import make_circles
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+# --------------------------------------
+# 1. Create Circular Two-Class Dataset
+# --------------------------------------
+X, y = make_circles(n_samples=1500, noise=0.08, factor=0.4, random_state=42)
+
+# Plot raw data
+plt.figure(figsize=(5,5))
+plt.scatter(X[:,0], X[:,1], c=y, cmap="coolwarm")
+plt.title("Circular Dataset (make_circles)")
+plt.show()
+
+# --------------------------------------
+# 2. Train-Test Split + Scaling
+# --------------------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# --------------------------------------
+# 3. Neural Network Model
+# --------------------------------------
+model = MLPClassifier(hidden_layer_sizes=(32, 32),
+                      activation='tanh',
+                      solver='adam',
+                      learning_rate_init=0.001,
+                      max_iter=800,
+                      random_state=42)
+
+# Train model
+model.fit(X_train, y_train)
+
+# --------------------------------------
+# 4. Evaluate Performance
+# --------------------------------------
+y_pred = model.predict(X_test)
+
+print("\n=== NN Model Performance on Circular Data ===\n")
+print("Accuracy:", accuracy_score(y_test, y_pred))
+
+print("\nConfusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+# --------------------------------------
+# 5. Decision Boundary (Visualization)
+# --------------------------------------
+h = 0.02
+x_min, x_max = X[:,0].min() - 1, X[:,0].max() + 1
+y_min, y_max = X[:,1].min() - 1, X[:,1].max() + 1
+xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                     np.arange(y_min, y_max, h))
+
+Z = model.predict(scaler.transform(np.c_[xx.ravel(), yy.ravel()]))
+Z = Z.reshape(xx.shape)
+
+plt.figure(figsize=(6,6))
+plt.contourf(xx, yy, Z, alpha=0.6, cmap="coolwarm")
+plt.scatter(X[:,0], X[:,1], c=y, cmap="coolwarm", edgecolors="k", s=25)
+plt.title("Decision Boundary of Neural Network on Circular Data")
+plt.show()
