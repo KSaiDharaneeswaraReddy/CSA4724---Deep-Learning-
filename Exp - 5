@@ -1,0 +1,28 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# ---------------------------------------------------------
+# 1. Create sample numerical data for linear regression
+# ---------------------------------------------------------
+np.random.seed(42)
+X = 2 * np.random.rand(100, 1)
+y = 4 + 3 * X + np.random.randn(100, 1)  # true slope = 3, intercept = 4
+
+# ---------------------------------------------------------
+# 2. Gradient Descent Implementation
+# ---------------------------------------------------------
+def gradient_descent(X, y, lr=0.1, n_iters=100):
+    m = len(y)
+    
+    # Initial parameters
+    theta0 = 0
+    theta1 = 0
+    
+    cost_history = []
+    
+    for i in range(n_iters):
+        y_pred = theta0 + theta1 * X
+        error = y_pred - y
+        
+        # Compute gradients
+        d_theta0 = (1/m) * np.sum(erro*_
