@@ -1,0 +1,102 @@
+# --------------------------------------------------------------------
+# Performance Verification of Neural Network using Spiral Dataset
+# Dataset : Synthetic Spiral (2-class)
+# Model   : MLPClassifier (Neural Network)
+# --------------------------------------------------------------------
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+# -------------------------------------------------------
+# 1. Function to Generate Spiral Data
+# -------------------------------------------------------
+def generate_spiral(n_points, noise=0.2):
+    np.random.seed(42)
+    n = np.arange(0, n_points)
+    r = n / n_points
+    theta = 2 * np.pi * n / n_points * 4  # spiral turns
+
+    # Spiral class 0
+    x0 = r * np.cos(theta) + np.random.randn(n_points) * noise
+    y0 = r * np.sin(theta) + np.random.randn(n_points) * noise
+    c0 = np.zeros(n_points)
+
+    # Spiral class 1 (shifted by π)
+    x1 = r * np.cos(theta + np.pi) + np.random.randn(n_points) * noise
+    y1 = r * np.sin(theta + np.pi) + np.random.randn(n_points) * noise
+    c1 = np.ones(n_points)
+
+    X = np.vstack([np.column_stack([x0, y0]), np.column_stack([x1, y1])])
+    y = np.concatenate([c0, c1])
+    return X, y
+
+# -------------------------------------------------------
+# 2. Create Spiral Dataset
+# -------------------------------------------------------
+X, y = generate_spiral(800, noise=0.12)
+
+# Plot raw spiral data
+plt.figure(figsize=(6,6))
+plt.scatter(X[:,0], X[:,1], c=y, cmap="coolwarm", s=15)
+plt.title("Spiral Dataset (2-class)")
+plt.show()
+
+# -------------------------------------------------------
+# 3. Train-test Split + Scaling
+# -------------------------------------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y
+)
+
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# -------------------------------------------------------
+# 4. Neural Network Model
+# -------------------------------------------------------
+model = MLPClassifier(hidden_layer_sizes=(64, 64, 32),
+                      activation='tanh',
+                      solver='adam',
+                      learning_rate_init=0.001,
+                      max_iter=2000,
+                      random_state=42)
+
+# Train
+model.fit(X_train, y_train)
+
+# -------------------------------------------------------
+# 5. Evaluation
+# -------------------------------------------------------
+y_pred = model.predict(X_test)
+
+print("\n=== NN Model Performance on Spiral Data ===\n")
+print("Accuracy:", accuracy_score(y_test, y_pred))
+
+print("\nConfusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+# -------------------------------------------------------
+# 6. Decision Boundary Plot
+# -------------------------------------------------------
+h = 0.02
+x_min, x_max = X[:,0].min() - 1, X[:,0].max() + 1
+y_min, y_max = X[:,1].min() - 1, X[:,1].max() + 1
+xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                     np.arange(y_min, y_max, h))
+
+Z = model.predict(scaler.transform(np.c_[xx.ravel(), yy.ravel()]))
+Z = Z.reshape(xx.shape)
+
+plt.figure(figsize=(7,7))
+plt.contourf(xx, yy, Z, alpha=0.5, cmap="coolwarm")
+plt.scatter(X[:,0], X[:,1], c=y, cmap="coolwarm", s=15, edgecolor="k")
+plt.title("Decision Boundary of Neural Network on Spiral Data")
+plt.show()
