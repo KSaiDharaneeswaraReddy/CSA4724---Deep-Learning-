@@ -1,0 +1,118 @@
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+# -------------------------------------------------------------
+# 1. LOAD IMAGE
+# -------------------------------------------------------------
+# Replace with your image path
+image = cv2.imread("image.jpg")
+img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+plt.figure(figsize=(6,5))
+plt.imshow(img)
+plt.title("Original Image")
+plt.axis("off")
+plt.show()
+
+# -------------------------------------------------------------
+# 2. PRE-PROCESSING (Grayscale + Threshold + Morphology)
+# -------------------------------------------------------------
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+# Noise removal
+blur = cv2.GaussianBlur(gray, (5,5), 0)
+
+# Binary image using Otsu (helpful for watershed)
+ret, binary = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+plt.figure(figsize=(6,5))
+plt.imshow(binary, cmap="gray")
+plt.title("Binary Image (Preprocessing)")
+plt.axis("off")
+plt.show()
+
+# -------------------------------------------------------------
+# 3. MORPHOLOGY: Identify Background & Foreground
+# -------------------------------------------------------------
+kernel = np.ones((3,3), np.uint8)
+
+# Remove noise
+opening = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel, iterations=2)
+
+# Sure background area
+sure_bg = cv2.dilate(opening, kernel, iterations=3)
+
+# Sure foreground area via distance transform
+dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
+ret, sure_fg = cv2.threshold(dist_transform, 0.5 * dist_transform.max(), 255, 0)
+
+sure_fg = np.uint8(sure_fg)
+
+# Unknown region
+unknown = cv2.subtract(sure_bg, sure_fg)
+
+# -------------------------------------------------------------
+# 4. WATERSHED MARKER LABELLING
+# -------------------------------------------------------------
+ret, markers = cv2.connectedComponents(sure_fg)
+
+# Add 1 to ensure background is not zero
+markers = markers + 1
+
+# Mark unknown as 0
+markers[unknown == 255] = 0
+
+plt.figure(figsize=(6,5))
+plt.imshow(markers, cmap="jet")
+plt.title("Markers for Watershed")
+plt.axis("off")
+plt.show()
+
+# -------------------------------------------------------------
+# 5. APPLY WATERSHED
+# -------------------------------------------------------------
+markers = cv2.watershed(image, markers)
+
+# Mark boundaries in red
+segmented_image = img.copy()
+segmented_image[markers == -1] = [255, 0, 0]   # boundary shown in red
+
+plt.figure(figsize=(6,5))
+plt.imshow(segmented_image)
+plt.title("Watershed Segmentation Result")
+plt.axis("off")
+plt.show()
+
+# -------------------------------------------------------------
+# 6. PERFORMANCE VERIFICATION
+# -------------------------------------------------------------
+unique_segments = len(np.unique(markers)) - 1  # exclude boundary label -1
+print("\n===== PERFORMANCE VERIFICATION =====")
+print("Number of segments detected:", unique_segments)
+
+# Calculate edge mask from watershed boundaries
+boundary_mask = np.uint8(markers == -1) * 255
+
+plt.figure(figsize=(6,5))
+plt.imshow(boundary_mask, cmap='gray')
+plt.title("Watershed Boundary Mask")
+plt.axis("off")
+plt.show()
+
+# -------------------------------------------------------------
+# 7. BEFORE vs AFTER COMPARISON
+# -------------------------------------------------------------
+plt.figure(figsize=(12,5))
+
+plt.subplot(1,2,1)
+plt.imshow(img)
+plt.title("Before Segmentation")
+plt.axis("off")
+
+plt.subplot(1,2,2)
+plt.imshow(segmented_image)
+plt.title("After Watershed Segmentation")
+plt.axis("off")
+
+plt.show()
