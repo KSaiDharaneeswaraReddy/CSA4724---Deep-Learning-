@@ -1,0 +1,76 @@
+# -------------------------------------------------------------
+# Performance Verification of Neural Network using Multi-Class Data
+# Dataset : IRIS (3 classes)
+# Model   : MLPClassifier (Neural Network)
+# -------------------------------------------------------------
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split, learning_curve
+from sklearn.preprocessing import StandardScaler
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+# ----------------------------------------
+# 1. Load Multi-Class Dataset (IRIS)
+# ----------------------------------------
+data = load_iris()
+X = data.data          # 4 features
+y = data.target        # 3 classes (0, 1, 2)
+
+# Split dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# Normalize features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# ----------------------------------------
+# 2. Create & Train Neural Network Model
+# ----------------------------------------
+model = MLPClassifier(hidden_layer_sizes=(64, 32),
+                      activation='relu',
+                      solver='adam',
+                      learning_rate_init=0.001,
+                      max_iter=600,
+                      random_state=42)
+
+model.fit(X_train, y_train)
+
+# ----------------------------------------
+# 3. Performance Evaluation
+# ----------------------------------------
+y_pred = model.predict(X_test)
+
+print("=== MULTI-CLASS NN MODEL PERFORMANCE ===\n")
+print("Accuracy:", accuracy_score(y_test, y_pred))
+
+print("\nConfusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred, target_names=data.target_names))
+
+# ----------------------------------------
+# 4. Learning Curve Plot
+# ----------------------------------------
+train_sizes, train_scores, test_scores = learning_curve(
+    model, X, y, cv=5, scoring='accuracy'
+)
+
+train_mean = train_scores.mean(axis=1)
+test_mean = test_scores.mean(axis=1)
+
+plt.figure(figsize=(8, 5))
+plt.plot(train_sizes, train_mean, 'o-', label="Training Score")
+plt.plot(train_sizes, test_mean, 's-', label="Validation Score")
+plt.title("Learning Curve - Neural Network (Multi-Class IRIS Dataset)")
+plt.xlabel("Training Size")
+plt.ylabel("Accuracy")
+plt.legend()
+plt.grid(True)
+plt.show()
