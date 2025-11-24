@@ -1,0 +1,135 @@
+# ---------------------------------------------------------------------
+# UNet for Image Segmentation in Python (TensorFlow/Keras)
+# Dataset: Oxford-IIIT Pet Image Segmentation (Built-in)
+# ---------------------------------------------------------------------
+
+import tensorflow as tf
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Conv2DTranspose, concatenate, Input
+from tensorflow.keras.models import Model
+import matplotlib.pyplot as plt
+
+# ---------------------------------------------------------------------
+# 1. Load Dataset (Oxford-IIIT Pets Segmentation)
+# ---------------------------------------------------------------------
+
+IMG_SIZE = 128
+
+dataset, info = tf.keras.datasets.oxford_iiit_pet.load_data()
+(images, masks), (_, _) = dataset
+
+# Normalize images
+images = images.astype("float32") / 255.0
+
+# Resize images & masks
+images = tf.image.resize(images, (IMG_SIZE, IMG_SIZE))
+masks = tf.image.resize(masks, (IMG_SIZE, IMG_SIZE), method="nearest")
+
+# Masks contain 3 classes → convert to binary for simplicity
+masks = tf.where(masks > 0, 1, 0)
+
+# Train / Test Split
+train_size = int(0.8 * images.shape[0])
+X_train, X_test = images[:train_size], images[train_size:]
+Y_train, Y_test = masks[:train_size], masks[train_size:]
+
+print("Dataset Loaded:", X_train.shape, Y_train.shape)
+
+# ---------------------------------------------------------------------
+# 2. UNet Model Function
+# ---------------------------------------------------------------------
+
+def unet_model(input_size=(128,128,3)):
+    inputs = Input(input_size)
+
+    # ---- Encoder ----
+    c1 = Conv2D(64, 3, activation="relu", padding="same")(inputs)
+    c1 = Conv2D(64, 3, activation="relu", padding="same")(c1)
+    p1 = MaxPooling2D()(c1)
+
+    c2 = Conv2D(128, 3, activation="relu", padding="same")(p1)
+    c2 = Conv2D(128, 3, activation="relu", padding="same")(c2)
+    p2 = MaxPooling2D()(c2)
+
+    c3 = Conv2D(256, 3, activation="relu", padding="same")(p2)
+    c3 = Conv2D(256, 3, activation="relu", padding="same")(c3)
+    p3 = MaxPooling2D()(c3)
+
+    c4 = Conv2D(512, 3, activation="relu", padding="same")(p3)
+    c4 = Conv2D(512, 3, activation="relu", padding="same")(c4)
+    p4 = MaxPooling2D()(c4)
+
+    # ---- Bottleneck ----
+    c5 = Conv2D(1024, 3, activation="relu", padding="same")(p4)
+    c5 = Conv2D(1024, 3, activation="relu", padding="same")(c5)
+
+    # ---- Decoder ----
+    u6 = Conv2DTranspose(512, 2, strides=2, padding="same")(c5)
+    u6 = concatenate([u6, c4])
+    c6 = Conv2D(512, 3, activation="relu", padding="same")(u6)
+    c6 = Conv2D(512, 3, activation="relu", padding="same")(c6)
+
+    u7 = Conv2DTranspose(256, 2, strides=2, padding="same")(c6)
+    u7 = concatenate([u7, c3])
+    c7 = Conv2D(256, 3, activation="relu", padding="same")(u7)
+    c7 = Conv2D(256, 3, activation="relu", padding="same")(c7)
+
+    u8 = Conv2DTranspose(128, 2, strides=2, padding="same")(c7)
+    u8 = concatenate([u8, c2])
+    c8 = Conv2D(128, 3, activation="relu", padding="same")(u8)
+    c8 = Conv2D(128, 3, activation="relu", padding="same")(c8)
+
+    u9 = Conv2DTranspose(64, 2, strides=2, padding="same")(c8)
+    u9 = concatenate([u9, c1])
+    c9 = Conv2D(64, 3, activation="relu", padding="same")(u9)
+    c9 = Conv2D(64, 3, activation="relu", padding="same")(c9)
+
+    outputs = Conv2D(1, 1, activation="sigmoid")(c9)
+
+    return Model(inputs, outputs)
+
+# Build UNet
+model = unet_model()
+model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
+
+model.summary()
+
+# ---------------------------------------------------------------------
+# 3. Train the UNet
+# ---------------------------------------------------------------------
+
+history = model.fit(
+    X_train, Y_train,
+    batch_size=16,
+    epochs=10,
+    validation_data=(X_test, Y_test)
+)
+
+# ---------------------------------------------------------------------
+# 4. Visualize Predictions
+# ---------------------------------------------------------------------
+
+def show_results(index=5):
+    img = X_test[index]
+    mask = Y_test[index]
+
+    pred_mask = model.predict(img.reshape(1, IMG_SIZE, IMG_SIZE, 3))[0]
+    pred_mask = tf.where(pred_mask > 0.5, 1, 0)
+
+    plt.figure(figsize=(12,4))
+
+    plt.subplot(1,3,1)
+    plt.title("Image")
+    plt.imshow(img)
+
+    plt.subplot(1,3,2)
+    plt.title("Ground Truth Mask")
+    plt.imshow(mask[:,:,0], cmap="gray")
+
+    plt.subplot(1,3,3)
+    plt.title("Predicted Mask")
+    plt.imshow(pred_mask[:,:,0], cmap="gray")
+
+    plt.show()
+
+# Display sample results
+show_results(10)
