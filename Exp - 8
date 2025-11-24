@@ -1,0 +1,93 @@
+# -----------------------------------------------
+# Multi-Layer Perceptron Experiment (Similar to NN Playground)
+# Try different learning rates, activation functions, and inputs
+# -----------------------------------------------
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.datasets import make_moons, make_circles, make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
+
+# -----------------------------
+# 1. Load Dataset (Non-linear)
+# -----------------------------
+X, y = make_moons(n_samples=1200, noise=0.25, random_state=42)
+
+# Try alternative datasets:
+# X, y = make_circles(n_samples=1000, noise=0.15, factor=0.5)
+# X, y = make_classification(n_samples=1200, n_features=2, n_classes=2, 
+#                            n_informative=2, n_redundant=0)
+
+# Train / Test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardization
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# -----------------------------------------------
+# 2. Set Experiment Parameters
+# -----------------------------------------------
+learning_rates = [0.001, 0.01, 0.1]
+activation_functions = ["relu", "tanh", "logistic"]
+hidden_layers = [(5,), (10,), (20,)]
+
+# -----------------------------------------------
+# 3. Train Models for All Combinations
+# -----------------------------------------------
+results = []
+
+for lr in learning_rates:
+    for act in activation_functions:
+        for hl in hidden_layers:
+            
+            mlp = MLPClassifier(hidden_layer_sizes=hl,
+                                activation=act,
+                                learning_rate_init=lr,
+                                max_iter=1500,
+                                random_state=42)
+
+            mlp.fit(X_train, y_train)
+            pred = mlp.predict(X_test)
+            acc = accuracy_score(y_test, pred)
+            
+            results.append((lr, act, hl, acc))
+            print(f"LR={lr}, Activation={act}, Layers={hl}  → Accuracy = {acc:.4f}")
+
+# -----------------------------------------------
+# 4. Visualize Decision Boundary for One Setting
+# -----------------------------------------------
+# Select a configuration for visualization
+chosen_lr = 0.01
+chosen_activation = "tanh"
+chosen_hidden = (10,)
+
+mlp_model = MLPClassifier(hidden_layer_sizes=chosen_hidden,
+                          activation=chosen_activation,
+                          learning_rate_init=chosen_lr,
+                          max_iter=1500,
+                          random_state=42)
+
+mlp_model.fit(X_train, y_train)
+
+# Create meshgrid for decision boundary
+xx, yy = np.meshgrid(
+    np.linspace(X_train[:, 0].min()-1, X_train[:, 0].max()+1, 400),
+    np.linspace(X_train[:, 1].min()-1, X_train[:, 1].max()+1, 400)
+)
+
+Z = mlp_model.predict(np.c_[xx.ravel(), yy.ravel()])
+Z = Z.reshape(xx.shape)
+
+# Plotting
+plt.figure(figsize=(8, 6))
+plt.contourf(xx, yy, Z, alpha=0.3)
+plt.scatter(X_test[:, 0], X_test[:, 1], c=y_test, edgecolor='k')
+plt.title(f"Decision Boundary\nLR={chosen_lr}, Activation={chosen_activation}, Hidden={chosen_hidden}")
+plt.xlabel("Input Feature 1")
+plt.ylabel("Input Feature 2")
+plt.show()
